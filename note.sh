@@ -1,3 +1,4 @@
+#!/bin/bash
 # ==============================================
 # 极简笔记系统 (Note System) v1.1
 # 作者: gall911 with DeepSeek-V3
@@ -22,6 +23,7 @@ note() {
         dir_status="🆕 目录不存在，将在首次使用时创建"
     fi
 
+    # 显示帮助信息
     if [ "$1" = "help" ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
         echo "📘 极简笔记系统 $VERSION"
         echo "主要开发: gall911"
@@ -47,6 +49,7 @@ note() {
         return 0
     fi
 
+    # 显示版本信息
     if [ "$1" = "version" ] || [ "$1" = "-v" ] || [ "$1" = "--version" ]; then
         echo "📘 极简笔记系统 $VERSION"
         echo ""
@@ -56,6 +59,7 @@ note() {
         return 0
     fi
 
+    # 显示系统状态
     if [ "$1" = "status" ]; then
         echo "📊 笔记系统状态"
         echo "────────────────────────────────────"
@@ -75,6 +79,7 @@ note() {
         return 0
     fi
 
+    # 显示所有分类列表
     if [ "$1" = "list" ]; then
         if [ ! -d "$NOTE_DIR" ] || [ -z "$(ls -A "$NOTE_DIR" 2>/dev/null)" ]; then
             echo "📭 笔记目录为空"
@@ -90,14 +95,15 @@ note() {
         return 0
     fi
 
+    # 添加新笔记
     if [ "$1" = "add" ]; then
         if [ $# -lt 4 ]; then
             echo "❌ 参数不足！用法: note add <分类> <命令> <说明>"
             return 1
         fi
-        category="$2"
-        command="$3"
-        description="$4"
+        local category="$2"
+        local command="$3"
+        local description="$4"
 
         # 创建目录（如果不存在）
         if [ ! -d "$NOTE_DIR" ]; then
@@ -111,6 +117,7 @@ note() {
             first_entry="🆕 新分类"
         fi
 
+        # 将笔记写入文件
         echo "# $command" >> $NOTE_DIR/"$category".txt
         echo "cmd: $command" >> $NOTE_DIR/"$category".txt
         echo "desc: $description" >> $NOTE_DIR/"$category".txt
@@ -121,8 +128,9 @@ note() {
         return 0
     fi
 
-    category="$1"
-    keyword="$2"
+    # 搜索或显示笔记
+    local category="$1"
+    local keyword="$2"
 
     # 检查分类是否存在
     if [ ! -f $NOTE_DIR/"$category".txt ]; then
@@ -139,11 +147,14 @@ note() {
         return 1
     fi
 
+    # 根据是否有关键词进行搜索或显示全部
     if [ -n "$keyword" ]; then
         echo "🔍 在 $category 中搜索: \"$keyword\""
         echo "────────────────────────────────────"
+        # 使用 awk 进行智能搜索，支持忽略大小写
         awk -v search="$keyword" 'BEGIN { IGNORECASE=1; found=0; entry=""; count=0 } /^#/ { if (found && entry != "") { print entry; print "────────────────────────────────────"; count++; } entry=$0; found=0 } /^cmd:|^desc:/ { entry=entry "\n" $0; if ($0 ~ search) found=1; } /^$/ { if (found && entry != "") { print entry; print "────────────────────────────────────"; count++; found=0; } entry=""; } END { if (found && entry != "") { print entry; print "────────────────────────────────────"; count++; } if (count == 0) { print "❌ 未找到匹配的笔记" } else { print "📊 找到 " count " 条结果" } }' $NOTE_DIR/"$category".txt
     else
+        # 显示该分类下的所有笔记
         local count=$(grep -c "^cmd:" $NOTE_DIR/"$category".txt)
         echo "📁 $category 分类 ($count 条笔记)"
         echo "────────────────────────────────────"
@@ -153,10 +164,11 @@ note() {
         echo "📁 文件位置: $NOTE_DIR/$category.txt"
     fi
 }
-# 设置短别名
+
+# 设置短别名，方便快速使用
 alias n=note
 
-#=========  n  专用补全 =========
+# ========= 自动补全功能 =========
 # note 命令的自动补全功能
 _note_completion() {
     local cur prev notes_dir
@@ -180,7 +192,7 @@ _note_completion() {
 
     # 第二级补全：add 命令后的分类补全
     elif [ $COMP_CWORD -eq 2 ] && [ "${prev}" = "add" ]; then
-        # 这里可以预定义一些常用分类，或者留空让用户自己输入
+        # 预定义常用分类
         local common_categories="linux mud git vim project note"
         COMPREPLY=( $(compgen -W "$common_categories" -- "$cur") )
 
@@ -204,6 +216,6 @@ _note_completion() {
     fi
 }
 
-# 注册自动补全
+# 注册自动补全功能
 complete -F _note_completion note
 complete -F _note_completion n  # 为别名也注册补全
